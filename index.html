@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calcolatore Lotti — XFunded</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+      background-color: #050608;
+      color: #f5f5f7;
+      overflow-x: hidden;
+    }
+    .font-mono {
+      font-family: "SF Mono", "JetBrains Mono", monospace;
+    }
+    /* Apple VisionOS / macOS Dark Glassmorphism */
+    .apple-glass {
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.025) 100%);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 
+        0 30px 60px -15px rgba(0, 0, 0, 0.75),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+    }
+    .glass-field {
+      background: rgba(255, 255, 255, 0.045);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+    .glass-field:focus {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.35);
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.07);
+    }
+    .glass-field:disabled {
+      background: rgba(255, 255, 255, 0.02);
+      border-color: rgba(255, 255, 255, 0.05);
+      color: rgba(245, 245, 247, 0.45);
+    }
+    .glass-result {
+      background: rgba(0, 0, 0, 0.28);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+    }
+    /* Rimozione frecce input numerici */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+    /* Stile freccia select minimale */
+    select.glass-field {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.85rem center;
+      padding-right: 2.2rem;
+    }
+    select option {
+      background-color: #16181d;
+      color: #f5f5f7;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 relative selection:bg-white/20 selection:text-white">
+
+  <!-- Bagliori ambientali Apple-style sullo sfondo -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden">
+    <div class="absolute -top-32 -left-24 w-96 h-96 bg-blue-500/15 rounded-full blur-[120px]"></div>
+    <div class="absolute -bottom-32 -right-24 w-96 h-96 bg-emerald-500/12 rounded-full blur-[120px]"></div>
+  </div>
+
+  <!-- Singolo div centrale Apple Glassmorphism -->
+  <div class="relative z-10 w-full max-w-[400px] apple-glass rounded-[28px] p-6 sm:p-7">
+    
+    <!-- Intestazione minimale -->
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-[17px] font-semibold tracking-tight text-white/95">Position Size</h1>
+      <span class="text-[11px] font-mono font-medium text-white/60 bg-white/[0.06] border border-white/[0.08] px-2.5 py-1 rounded-full">
+        4x · 0.5% Risk
+      </span>
+    </div>
+
+    <div class="space-y-4">
+      
+      <!-- Coppia e Leva -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="pair" class="block text-[11px] font-medium text-white/50 mb-1.5 ml-1">Coppia</label>
+          <select id="pair" onchange="aggiornaCoppia()"
+            class="w-full glass-field rounded-2xl px-3.5 py-2.5 text-[14px] font-mono font-medium text-white outline-none cursor-pointer">
+            <option value="XAU">XAUUSD.m</option>
+            <option value="BTC">BTCUSD.e</option>
+          </select>
+        </div>
+        <div>
+          <label for="leverage" class="block text-[11px] font-medium text-white/50 mb-1.5 ml-1">Leva</label>
+          <input type="text" id="leverage" value="1:15" disabled
+            class="w-full glass-field rounded-2xl px-3.5 py-2.5 text-[14px] font-mono font-medium outline-none cursor-not-allowed" />
+        </div>
+      </div>
+
+      <!-- Saldo -->
+      <div>
+        <label for="balance" class="block text-[11px] font-medium text-white/50 mb-1.5 ml-1">Saldo ($)</label>
+        <input type="number" id="balance" value="50192.25" step="any"
+          class="w-full glass-field rounded-2xl px-3.5 py-2.5 text-[15px] font-mono font-medium text-white outline-none" />
+      </div>
+
+      <!-- Entry e SL -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="entry" class="block text-[11px] font-medium text-white/50 mb-1.5 ml-1">Entry</label>
+          <input type="number" id="entry" step="any"
+            class="w-full glass-field rounded-2xl px-3.5 py-2.5 text-[14px] font-mono text-white outline-none" />
+        </div>
+        <div>
+          <label for="sl" class="block text-[11px] font-medium text-rose-400/80 mb-1.5 ml-1">SL</label>
+          <input type="number" id="sl" step="any"
+            class="w-full glass-field rounded-2xl px-3.5 py-2.5 text-[14px] font-mono text-white outline-none" />
+        </div>
+      </div>
+
+      <!-- TP1, TP2, TP3, TP4 -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="tp1" class="block text-[11px] font-medium text-emerald-400/80 mb-1.5 ml-1">TP1</label>
+          <input type="number" id="tp1" step="any"
+            class="w-full glass-field rounded-2xl px-3.5 py-2.5 text-[14px] font-mono text-white outline-none" />
+        </div>
+        <div>
+          <label for="tp2" class="block text-[11px] font-medium text-emerald-400/80 mb-1.5 ml-1">TP2</label>
+          <input type="number" id="tp2" step="any"
+            class="w-full glass-field rounded-2xl px-3.5 py-2.5 text-[14px] font-mono text-white outline-none" />
+        </div>
+        <div>
+          <label for="tp3" class="block text-[11px] font-medium text-emerald-400/80 mb-1.5 ml-1">TP3</label>
+          <input type="number" id="tp3" step="any"
+            class="w-full glass-field rounded-2xl px-3.5 py-2.5 text-[14px] font-mono text-white outline-none" />
+        </div>
+        <div>
+          <label for="tp4" class="block text-[11px] font-medium text-emerald-400/80 mb-1.5 ml-1">TP4</label>
+          <input type="number" id="tp4" step="any"
+            class="w-full glass-field rounded-2xl px-3.5 py-2.5 text-[14px] font-mono text-white outline-none" />
+        </div>
+      </div>
+
+      <!-- Bottone Calcola Apple Pill -->
+      <button type="button" onclick="calcola()"
+        class="w-full mt-2 bg-white hover:bg-white/90 active:scale-[0.985] text-[#050608] font-semibold text-[14px] py-3 rounded-full transition-all duration-150 shadow-[0_8px_24px_-4px_rgba(255,255,255,0.25)] cursor-pointer">
+        Calcola
+      </button>
+
+      <!-- Risultato -->
+      <div class="glass-result rounded-2xl p-4 mt-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[13px] font-medium text-white/60">Lotto per operazione:</span>
+          <button type="button" id="copyBtn" onclick="copiaLotto()" title="Copia lotto"
+            class="flex items-center gap-2 group cursor-pointer focus:outline-none">
+            <span id="lottoSingolo" class="text-[22px] font-mono font-bold tracking-tight text-white">--</span>
+            <span id="copyBadge" class="hidden text-[10px] font-medium text-white/50 group-hover:text-white bg-white/[0.06] group-hover:bg-white/[0.12] px-2 py-0.5 rounded-full transition">
+              Copia
+            </span>
+          </button>
+        </div>
+
+        <!-- Riga discreta rischio & payout netto 80% -->
+        <div id="dettagliDiscreti" class="hidden mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-white/45">
+          <span id="rischioInfo">Rischio: --</span>
+          <span id="profittoNettoInfo" class="text-emerald-400/80"></span>
+        </div>
+
+        <!-- Avviso discreto -->
+        <p id="avviso" class="hidden mt-2.5 text-[11px] leading-relaxed text-amber-300/90 bg-amber-500/10 border border-amber-400/20 rounded-xl px-3 py-2 text-center"></p>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const CONFIG = {
+      XAU: { leverageLabel: '1:15', leverage: 15, contractSize: 100 },
+      BTC: { leverageLabel: '1:2',  leverage: 2,  contractSize: 1 }
+    };
+
+    let ultimoLotto = '';
+
+    function aggiornaCoppia() {
+      const pair = document.getElementById('pair').value;
+      document.getElementById('leverage').value = CONFIG[pair].leverageLabel;
+    }
+
+    function calcola() {
+      const pair = document.getElementById('pair').value;
+      const { leverage, contractSize } = CONFIG[pair];
+
+      const balance = parseFloat(document.getElementById('balance').value);
+      const entry = parseFloat(document.getElementById('entry').value);
+      const sl = parseFloat(document.getElementById('sl').value);
+      const tps = [
+        parseFloat(document.getElementById('tp1').value),
+        parseFloat(document.getElementById('tp2').value),
+        parseFloat(document.getElementById('tp3').value),
+        parseFloat(document.getElementById('tp4').value)
+      ];
+
+      const avvisoBox = document.getElementById('avviso');
+      const dettagliBox = document.getElementById('dettagliDiscreti');
+      const copyBadge = document.getElementById('copyBadge');
+      avvisoBox.classList.add('hidden');
+
+      if (!balance || balance <= 0 || !entry || entry <= 0 || !sl || sl <= 0 || entry === sl) {
+        avvisoBox.textContent = 'Inserisci Saldo, Entry e SL validi.';
+        avvisoBox.classList.remove('hidden');
+        dettagliBox.classList.add('hidden');
+        copyBadge.classList.add('hidden');
+        document.getElementById('lottoSingolo').textContent = '--';
+        ultimoLotto = '';
+        return;
+      }
+
+      const isBuy = sl < entry;
+
+      // Rischio totale 0.5% del saldo diviso su 4 operazioni (0.125% per ordine)
+      const rischioTotaleTarget = balance * 0.005;
+      const rischioSingoloTarget = rischioTotaleTarget / 4;
+
+      const distanzaSL = Math.abs(entry - sl);
+      const lottoGrezzo = rischioSingoloTarget / (distanzaSL * contractSize);
+
+      // Arrotondamento per difetto a 2 decimali (minimo 0.01)
+      const lottoSingolo = Math.max(0.01, Math.floor(lottoGrezzo * 100) / 100);
+      ultimoLotto = lottoSingolo.toFixed(2);
+
+      const lottoTotale = lottoSingolo * 4;
+      const rischioRealeTotale = lottoTotale * distanzaSL * contractSize;
+      const margineTotale = (lottoTotale * entry * contractSize) / leverage;
+
+      const avvisi = [];
+      if (margineTotale > balance) {
+        avvisi.push(`Margine 4 ordini ($${margineTotale.toFixed(0)}) superiore al saldo.`);
+      }
+
+      // Calcolo profitto netto stimato (80% profit split)
+      let profittoLordo = 0;
+      let tpValidi = 0;
+      for (let i = 0; i < 4; i++) {
+        const tp = tps[i];
+        if (!isNaN(tp) && tp > 0) {
+          if ((isBuy && tp > entry) || (!isBuy && tp < entry)) {
+            profittoLordo += lottoSingolo * Math.abs(tp - entry) * contractSize;
+            tpValidi++;
+          } else {
+            avvisi.push(`TP${i + 1} non coerente (${isBuy ? 'BUY' : 'SELL'}).`);
+          }
+        }
+      }
+
+      const profittoNetto80 = profittoLordo * 0.8;
+
+      document.getElementById('lottoSingolo').textContent = ultimoLotto;
+      copyBadge.textContent = 'Copia';
+      copyBadge.classList.remove('hidden');
+
+      document.getElementById('rischioInfo').textContent = `Rischio: -$${rischioRealeTotale.toFixed(2)}`;
+      document.getElementById('profittoNettoInfo').textContent = tpValidi > 0
+        ? `Netto 80%: +$${profittoNetto80.toFixed(2)}`
+        : '';
+      dettagliBox.classList.remove('hidden');
+
+      if (avvisi.length > 0) {
+        avvisoBox.textContent = avvisi.join(' ');
+        avvisoBox.classList.remove('hidden');
+      }
+    }
+
+    function copiaLotto() {
+      if (!ultimoLotto) return;
+      const temp = document.createElement('textarea');
+      temp.value = ultimoLotto;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+
+      const badge = document.getElementById('copyBadge');
+      badge.textContent = 'Copiato';
+      setTimeout(() => {
+        badge.textContent = 'Copia';
+      }, 1500);
+    }
+  </script>
+</body>
+</html>
